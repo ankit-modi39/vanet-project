@@ -1,75 +1,80 @@
-#!/usr/bin/env python3
-
-import sys
 import pandas as pd
+import re
 import matplotlib.pyplot as plt
 
 class TraceAnalyzer:
     def __init__(self, trace_file):
         self.trace_file = trace_file
-        self.data = []
-        
-    def parse_trace(self):
-        with open(self.trace_file, 'r') as f:
-            for line in f:
-                if line.startswith('s') or line.startswith('r'):  # sent or received packets
-                    parts = line.split()
-                    try:
-                        self.data.append({
-                            'event': parts[0],
-                            'time': float(parts[1]),
-                            'node': int(parts[2].strip('_')),  # Strip underscores if present
-                            'packet_type': parts[3],
-                            'size': int(parts[5])
-                        })
-                    except ValueError as e:
-                        print(f"Skipping malformed line: {line.strip()} - Error: {e}")
 
-    
+    def parse_trace(self):
+        """Parses the trace file and extracts relevant columns."""
+        data = []
+        with open(self.trace_file, 'r') as file:
+            for line in file:
+                # Match trace format: event, time, node, layer, pkt_type, pkt_size, and flow_id
+                match = re.match(
+                    r"^(?P<event>\S+)\s+(?P<time>\S+)\s+(?P<node>\S+)\s+(?P<layer>\S+)\s+---\s+\S+\s+(?P<pkt_type>\S+)\s+(?P<size>\S+).*\[(?P<flow_id>\S+)\]",
+                    line
+                )
+                if match:
+                    data.append(match.groupdict())
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(data)
+        df['time'] = pd.to_numeric(df['time'])
+        df['size'] = pd.to_numeric(df['size'])
+        return df
+
     def analyze_performance(self):
-        df = pd.DataFrame(self.data)
-        
-        # Calculate packet delivery ratio
-        sent = df[df['event'] == 's'].shape[0]
-        received = df[df['event'] == 'r'].shape[0]
-        pdr = (received / sent) * 100 if sent > 0 else 0
-        
-        # Calculate throughput over time
-        df['throughput'] = df.groupby(df['time'].astype(int))['size'].transform('sum')
-        
-        # Plot results
-        plt.figure(figsize=(12, 6))
-        
-        plt.subplot(1, 2, 1)
-        plt.plot(df['time'].unique(), df.groupby('time')['throughput'].first())
-        plt.title('Throughput over Time')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Throughput (bytes)')
-        
-        plt.subplot(1, 2, 2)
-        plt.bar(['Sent', 'Received'], [sent, received])
-        plt.title(f'Packet Delivery Ratio: {pdr:.2f}%')
-        
-        plt.tight_layout()
-        plt.savefig('results/performance_analysis.png')
-        
+        """Analyzes performance metrics."""
+        df = self.parse_trace()
+
+        # Filter CBR packets
+        cbr_packets = df[df['pkt_type'] == 'cbr']
+
+        # Separate sent and received packets
+        sent_packets = cbr_packets[cbr_packets['event'] == 's']
+        received_packets = cbr_packets[cbr_packets['event'] == 'r']
+
+        # Identify unique packets by flow_id
+        unique_sent = sent_packets['flow_id'].nunique()
+        unique_received = received_packets['flow_id'].nunique()
+
+        # Compute performance metrics
+        pdr = (unique_received / unique_sent) * 100 if unique_sent > 0 else 0
+        throughput = received_packets['size'].sum() / df['time'].max() if not received_packets.empty else 0
+
         return {
-            'packet_delivery_ratio': pdr,
-            'average_throughput': df['throughput'].mean(),
-            'total_packets_sent': sent,
-            'total_packets_received': received
+            'Packet Delivery Ratio (%)': pdr,
+            'Average Throughput (bytes/sec)': throughput,
+            'Total Packets Sent': unique_sent,
+            'Total Packets Received': unique_received
         }
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Usage: python analyze_trace.py <trace_file>")
-        sys.exit(1)
-        
-    analyzer = TraceAnalyzer(sys.argv[1])
-    analyzer.parse_trace()
-    results = analyzer.analyze_performance()
-    
-    print("\nSimulation Results:")
-    print("-----------------")
-    for metric, value in results.items():
-        print(f"{metric.replace('_', ' ').title()}: {value:.2f}")
+    def plot_performance(self, metrics):
+        """Plots performance metrics."""
+        labels = list(metrics.keys())
+        values = list(metrics.values())
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(labels, values)
+        plt.xlabel('Metrics')
+        plt.ylabel('Values')
+        plt.title('VANET Simulation Performance')
+        plt.show()
+
+
+if __name__ == "__main__":
+    trace_file = "results/trace.tr"
+    analyzer = TraceAnalyzer(trace_file)
+
+    try:
+        results = analyzer.analyze_performance()
+        print("\nSimulation Results:")
+        print("-----------------")
+        for metric, value in results.items():
+            print(f"{metric}: {value:.2f}")
+
+        analyzer.plot_performance(results)
+    except Exception as e:
+        print(f"Error analyzing the trace file: {e}")

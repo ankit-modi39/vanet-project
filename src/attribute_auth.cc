@@ -82,6 +82,51 @@ std::string AttributeAuth::encryptWithKey(const std::string& message, const unsi
     return result;
 }
 
+std::string AttributeAuth::decryptWithKey(const std::string& ciphertext, const unsigned char* key) {
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        return "";
+    }
+
+    // Extract IV from the ciphertext
+    const unsigned char* iv = (unsigned char*)ciphertext.data();
+    const unsigned char* actualCiphertext = (unsigned char*)ciphertext.data() + 16;
+
+    int ciphertext_len = ciphertext.length() - 16;
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return "";
+    }
+
+    std::vector<unsigned char> plaintext(ciphertext_len + EVP_MAX_BLOCK_LENGTH);
+    int len1, len2;
+
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len1, actualCiphertext, ciphertext_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return "";
+    }
+
+    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len1, &len2) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return "";
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    return std::string((char*)plaintext.data(), len1 + len2);
+}
+
+std::string AttributeAuth::decryptMessage(int nodeId, const std::string& encryptedMessage) {
+    auto it = nodeCredentials.find(nodeId);
+    if (it == nodeCredentials.end()) {
+        return ""; // Node not found
+    }
+
+    const unsigned char* key = it->second.masterKey;
+    return decryptWithKey(encryptedMessage, key);
+}
+
 bool AttributeAuth::verifyAttributes(int nodeId, const std::vector<std::string>& requiredAttributes) {
     auto it = nodeCredentials.find(nodeId);
     if (it == nodeCredentials.end()) {

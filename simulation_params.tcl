@@ -9,7 +9,7 @@ set val(ant)    Antenna/OmniAntenna
 set val(x)      1000  ;# X dimension of the topography
 set val(y)      1000  ;# Y dimension of the topography
 set val(nn)     20    ;# Number of nodes
-set val(stop)   200   ;# Simulation time
+set val(stop)   300   ;# Simulation time
 set val(mobility_model) "random_waypoint"  ;# Mobility model
 
 # Security parameters

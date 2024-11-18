@@ -1,4 +1,4 @@
-    #include "attribute_auth.h"
+#include "attribute_auth.h"
 #include <chrono>
 #include <random>
 
@@ -24,6 +24,17 @@ std::string PrivacyPreservingComm::generatePseudonym(int nodeId) {
     // Map pseudonym to nodeId
     pseudonymMap[pseudonym] = nodeId;
     return pseudonym;
+}
+
+std::string PrivacyPreservingComm::getPseudonym(int nodeId) {
+    // Check if pseudonym already exists for the given nodeId
+    for (const auto& entry : pseudonymMap) {
+        if (entry.second == nodeId) {
+            return entry.first;
+        }
+    }
+    // If no pseudonym exists, generate a new one
+    return generatePseudonym(nodeId);
 }
 
 bool PrivacyPreservingComm::sendSecureMessage(int sourceId, int destId, 
