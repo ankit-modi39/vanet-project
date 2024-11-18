@@ -97,31 +97,29 @@ std::string AttributeAuth::encryptWithKey(const std::string &message, const unsi
 
 bool AttributeAuth::verifyAttributes(int nodeId, const std::vector<std::string> &requiredAttributes)
 {
-    // Attempt to find the node in the credentials map
-    const auto nodeIt = nodeCredentials.find(nodeId);
-    if (nodeIt == nodeCredentials.end())
+    auto it = nodeCredentials.find(nodeId);
+    if (it == nodeCredentials.end())
     {
-        // Node ID not found
         return false;
     }
 
-    // Extract the attributes of the node
-    const auto &nodeAttributes = nodeIt->second.attributes;
-
-    // Ensure all required attributes are present in the node's attributes
-    for (const auto &required : requiredAttributes)
+    // Check if node has all required attributes
+    for (const auto &reqAttr : requiredAttributes)
     {
-        if (std::none_of(nodeAttributes.begin(), nodeAttributes.end(),
-                         [&required](const auto &attributeInfo)
-                         {
-                             return attributeInfo.attribute == required;
-                         }))
+        bool found = false;
+        for (const auto &nodeAttr : it->second.attributes)
         {
-            return false; // A required attribute is missing
+            if (nodeAttr.attribute == reqAttr)
+            {
+                found = true;
+                break;
+            }
         }
+        if (!found)
+            return false;
     }
 
-    return true; // All required attributes are verified
+    return true;
 }
 
 std::string AttributeAuth::encryptMessage(const std::string &message,
