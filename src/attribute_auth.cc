@@ -23,7 +23,7 @@ AttributeAuth::~AttributeAuth()
 
 bool AttributeAuth::generateRandomKey(unsigned char *key, int length)
 {
-    return RAND_bytes(key, length) == 1;
+    return RAND_bytes(key, length) == 1?true:false;//added changes
 }
 
 bool AttributeAuth::generateKeys(int nodeId, const std::vector<std::string> &attributes)
