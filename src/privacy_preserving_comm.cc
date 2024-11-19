@@ -44,26 +44,46 @@ bool PrivacyPreservingComm::sendSecureMessage(int sourceId, int destId,
     if (sourcePseudonym.empty()) {
         sourcePseudonym = generatePseudonym(sourceId);
     }
-    
+
     // Prepare message structure
     messageCounter++;
     std::string messageStructure = 
         sourcePseudonym + "|" + 
         std::to_string(messageCounter) + "|" + 
         message;
-    
+
     // Encrypt message using attribute-based encryption
     std::vector<std::string> attributes = {"vehicle", "authorized"};  // Example attributes
     std::string encryptedMessage = auth->encryptMessage(messageStructure, attributes);
     
     if (encryptedMessage.empty()) {
+        // Encryption failed (e.g., attribute mismatch)
+        std::cerr << "Encryption failed for message from " 
+                  << sourceId << " to " << destId << "\n";
         return false;
     }
-    
-    // In a real implementation, this would send the message through the network
-    // For simulation purposes, we'll assume successful transmission
+
+    // Simulate real-world transmission success/failure
+    double transmissionProbability = 0.9; // 90% chance of successful transmission
+    double randomFactor = static_cast<double>(rand()) / RAND_MAX;
+    if (randomFactor > transmissionProbability) {
+        // Simulate transmission failure
+        std::cerr << "Message transmission failed from " 
+                  << sourceId << " to " << destId << "\n";
+        return false;
+    }
+
+    // Simulate network delay
+    int delay = rand() % 200; // Random delay up to 200ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+
+    // Transmission successful
+    std::cout << "Message successfully transmitted from " 
+              << sourceId << " to " << destId << " with delay: " 
+              << delay << " ms\n";
     return true;
 }
+
 
 std::string PrivacyPreservingComm::receiveSecureMessage(int destId, 
                                                        const std::string& encryptedMessage) {
