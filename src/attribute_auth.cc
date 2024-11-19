@@ -95,7 +95,6 @@ std::string AttributeAuth::encryptWithKey(const std::string &message, const unsi
     return result;
 }
 
-<<<<<<< HEAD
 std::string AttributeAuth::decryptWithKey(const std::string& ciphertext, const unsigned char* key) {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
@@ -142,10 +141,6 @@ std::string AttributeAuth::decryptMessage(int nodeId, const std::string& encrypt
 }
 
 bool AttributeAuth::verifyAttributes(int nodeId, const std::vector<std::string>& requiredAttributes) {
-=======
-bool AttributeAuth::verifyAttributes(int nodeId, const std::vector<std::string> &requiredAttributes)
-{
->>>>>>> b538685d0d6b1ff9e873109ca7e7a948a6b18961
     auto it = nodeCredentials.find(nodeId);
     if (it == nodeCredentials.end())
     {
