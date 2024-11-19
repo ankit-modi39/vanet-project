@@ -12,14 +12,11 @@ set val(rp)     AODV
 set val(x)      1000
 set val(y)      1000
 set val(stop)   200
-set val(cp)     "traffic.tcl"
-set val(sc)     "mobility.tcl"
 
 # Initialize Global Variables
 set ns [new Simulator]
 set tracefd [open results/trace.tr w]
 set namtrace [open results/nam.tr w]
-set routingfile [open results/routing.tr w]
 
 $ns trace-all $tracefd
 $ns namtrace-all-wireless $namtrace $val(x) $val(y)
@@ -84,7 +81,6 @@ proc set_random_motion {} {
     }
 }
 
-
 # Define traffic pattern
 proc create_traffic {} {
     global ns val node_
@@ -114,38 +110,86 @@ proc create_traffic {} {
     }
 }
 
+# Define secure message transmission
+proc send_secure_message {src dst msg} {
+    global ns val node_
+    
+    # Check if source and destination nodes are valid
+    if {![info exists node_($src)] || ![info exists node_($dst)]} {
+        puts "Error: Invalid node IDs for secure message transmission."
+        return
+    }
+
+    # Simulate pseudonym generation for source and destination nodes
+    set src_pseudonym [exec ./vanet_sim pseudonym $src]
+    set dst_pseudonym [exec ./vanet_sim pseudonym $dst]
+
+    if {$src_pseudonym eq "" || $dst_pseudonym eq ""} {
+        puts "Error: Failed to generate pseudonyms for nodes $src or $dst."
+        return
+    }
+
+    # Encrypt the message using attribute-based encryption
+    set encrypted_msg [exec ./vanet_sim encrypt $src $msg]
+
+    if {$encrypted_msg eq ""} {
+        puts "Error: Failed to encrypt the message from node $src to node $dst."
+        return
+    }
+
+    # Transmit the secure message
+    puts "Transmitting secure message: From $src_pseudonym to $dst_pseudonym"
+    puts "Message: $encrypted_msg"
+
+    # Log the secure message for analysis
+    set log_file [open "results/secure_messages.log" a]
+    puts $log_file "Time: [$ns now], Source: $src_pseudonym, Destination: $dst_pseudonym, Message: $msg, Encrypted: $encrypted_msg"
+    close $log_file
+
+    # Simulate message reception
+    $ns at [expr [$ns now] + 0.01] "receive_secure_message $dst $src \"$encrypted_msg\""
+}
+
+# Define secure message reception
+proc receive_secure_message {dst src encrypted_msg} {
+    global ns val node_
+
+    # Check if destination node exists
+    if {![info exists node_($dst)]} {
+        puts "Error: Invalid destination node $dst for message reception."
+        return
+    }
+
+    # Decrypt the message at the destination node
+    set decrypted_msg [exec ./vanet_sim decrypt $dst $encrypted_msg]
+
+    if {$decrypted_msg eq ""} {
+        puts "Error: Node $dst failed to decrypt the message from node $src."
+        return
+    }
+
+    # Output the decrypted message
+    puts "Node $dst received secure message from node $src:"
+    puts "Decrypted Message: $decrypted_msg"
+
+    # Log the received message
+    set log_file [open "results/received_messages.log" a]
+    puts $log_file "Time: [$ns now], Source: $src, Destination: $dst, Encrypted: $encrypted_msg, Decrypted: $decrypted_msg"
+    close $log_file
+}
+
 # Define finish procedure
 proc finish {} {
-    global ns tracefd namtrace routingfile
+    global ns tracefd namtrace
     $ns flush-trace
     close $tracefd
     close $namtrace
-    close $routingfile
     exec nam results/nam.tr &
     exit 0
 }
 
-# Initialize attribute-based authentication
-proc init_auth {} {
-    global ns val node_
-    for {set i 0} {$i < $val(nn)} {incr i} {
-        # Assign attributes to nodes (simulated)
-        set attributes "vehicle,authorized,trusted"
-        puts "Node $i initialized with attributes: $attributes"
-    }
-}
-
-# Define secure message transmission
-proc send_secure_message {src dst msg} {
-    global ns
-    puts "Secure message from node $src to node $dst: $msg"
-    # Here we would implement the actual secure message transmission
-    # using our C++ implementation
-}
-
 # Schedule events
-$ns at 0.0 "init_auth"
-$ns at 0.1 "create_traffic"
+$ns at 0.0 "create_traffic"
 $ns at 0.1 "set_random_motion"
 
 # Schedule some secure message transmissions
