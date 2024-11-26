@@ -1,3 +1,4 @@
+
 # Privacy-Preserving Attribute-Based Authenticated Key Management Scheme
 
 This repository provides an overview, implementation notes, and references for the **Privacy-Preserving Attribute-Based Authenticated Key Management Scheme for Accountable Vehicular Communications** as proposed in the paper by Haowen Tan, Wenying Zheng, Yunguo Guan, and Rongxing Lu. 
@@ -99,4 +100,4 @@ This project is a conceptual implementation of the proposed scheme. Follow these
 1. **Clone the Repository:**
    ```bash
    git clone https://github.com/your-username/privacy-preserving-vehicular-comm.git
-   cd privacy-preserving-vehicular-comm
+   bash scripts/run_simulation.sh
